@@ -39,7 +39,7 @@ end
 
 function getflag()
     for i,v in pairs(Client.InventoryCmds.State().container._store._byType.Misc._byUID) do
-        if v._data.id == "Magnet Flag" then
+        if v._data.id == "Hasty Flag" then
             return {v._data.id,i}
         end
     end
