@@ -1,4 +1,3 @@
-print("AAAAAAAAAAAAAAAAAAAAA")
 repeat wait(1) until game.Players
 repeat wait(1) until game.Players.LocalPlayer
 repeat wait(1) until game.ReplicatedStorage
@@ -8,39 +7,16 @@ local vu = game:GetService("VirtualUser")
 local plr = game.Players.LocalPlayer
 local Client = require(game.ReplicatedStorage.Library.Client)
 
-function getlastmap()
-    return Client.ZoneCmds.GetMaxOwnedZone()
-end
-
-function formatmap(text)
-    local result = string.match(text, "| (.*)$")
-    return result
-end
-
-function jump()
-    game:GetService("VirtualInputManager"):SendKeyEvent(true, 32, false, game)
-    wait(4)
-    game:GetService("VirtualInputManager"):SendKeyEvent(false, 32, false, game)
-end
-function formatclient(name)
-    local pattern = " table: .*$"
-    local result = name:gsub(pattern, "") 
-    return result
-end
-
-function getlocation()
-    for i,v in pairs(workspace.Map:GetChildren()) do
-        if formatmap(v.Name) == formatclient(getlastmap()) then
-            return v.INTERACT.BREAK_ZONES.BREAK_ZONE
-        end
+function dbuoi()
+    for i,v in pairs(game:GetService("Workspace")["__THINGS"].Orbs:GetChildren()) do
+        v.CanCollide = false
+        v.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0,0,0)
     end
-    return false
-end
-
-function getflag()
-    for i,v in pairs(Client.InventoryCmds.State().container._store._byType.Misc._byUID) do
-        if v._data.id == "Hasty Flag" then
-            return {v._data.id,i}
+    
+    for i,v in pairs(game:GetService("Workspace")["__THINGS"].Lootbags:GetDescendants()) do
+        if v:IsA("MeshPart") then
+            v.CanCollide = false
+            v.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0,0,0)
         end
     end
 end
@@ -56,69 +32,78 @@ function attack()
     end
 end
 
-function autofarm()
-    if getlocation() ~= false then
+function destroyvipzone()
+    for i,v in pairs(workspace.Map["1 | Spawn"].INTERACT.BREAK_ZONES:GetChildren()) do
+        if tostring(v.Position) == "214.12213134765625, 24.417156219482422, -587.1192626953125" then
+            print("A")
+           v:Destroy() 
+        end
+    end
+end
+
+destroyvipzone()
+
+game:GetService("RunService").Heartbeat:Connect(function()
+    spawn(function()
+	    game:GetService("ReplicatedStorage").Network.Breakables_PlayerDealDamage:FireServer(attack())
+    end)
+end)
+
+function hasunlockzones(name) 
+    return Client.Zones.Owns(name)
+end
+
+function getnextmap()
+    return Client.ZoneCmds.GetNextZone()
+end
+
+function getlastmap()
+    return Client.ZoneCmds.GetMaxOwnedZone()
+end
+
+function formatclient(name)
+    local pattern = " table: .*$"
+    local result = name:gsub(pattern, "") 
+    return result
+end
+
+function formatmap(text)
+    local result = string.match(text, "| (.*)$")
+    return result
+end
+
+function getlocation()
+    for i,v in pairs(workspace.Map:GetChildren()) do
+        if formatmap(v.Name) == formatclient(getlastmap()) then
+            return v.INTERACT.BREAK_ZONES.BREAK_ZONE
+        end
+    end
+    return false
+end
+
+function unlockmapattk()
+    game:GetService("ReplicatedStorage").Network.Zones_RequestPurchase:InvokeServer(formatclient(getnextmap()))
+    pcall(dbuoi)
+end
+
+function loop1()
+    while true do wait(5)
+        pcall(unlockmapattk)
+    end
+end
+
+spawn(loop1)
+
+function unlockmap()
+    if not hasunlockzones("Beach") then
         if (plr.Character.HumanoidRootPart.Position - getlocation().Position).Magnitude > 30 then
             plr.Character.HumanoidRootPart.CFrame = getlocation().CFrame
         end
     else
-        local args = {
-            [1] = formatclient(getlastmap())
-        }
-        
-        game:GetService("ReplicatedStorage").Network.Teleports_RequestTeleport:InvokeServer(unpack(args))
     end
 end
 
-spawn(function()
-    while true do wait()
-        pcall(autofarm)
-    end
-end)
-
-spawn(function()
-    while true do wait()
-        pcall(function()
-            local tickm = tick()
-            repeat wait()
-            until tick() - tickm >= 30
-            jump()
-        end)
-    end
-end)
-
-function click2(a)
-    game:GetService("VirtualInputManager"):SendMouseButtonEvent(a.AbsolutePosition.X+a.AbsoluteSize.X-50,a.AbsolutePosition.Y+50,0,true,a,1)
-    game:GetService("VirtualInputManager"):SendMouseButtonEvent(a.AbsolutePosition.X+a.AbsoluteSize.X-50,a.AbsolutePosition.Y+50,0,false,a,1)
+while true do wait()
+    local a,b = pcall(unlockmap)
+    print(a,b)
 end
-
-function getfruit()
-    local Client = require(game.ReplicatedStorage.Library.Client)
-    for i,v in pairs(Client.InventoryCmds.State().container._store._byType.Fruit._byUID) do
-        Client.FruitCmds.Consume(i)
-        wait(1)
-        click2(game:GetService("Players").LocalPlayer.PlayerGui.Message.Frame.Contents.Ok)
-    end
-end
-
-spawn(function()
-    while true do wait(10)
-        pcall(getfruit)
-    end
-end)
-
-spawn(function()
-    while true do wait(1)
-        pcall(function() 
-        click2(game:GetService("Players").LocalPlayer.PlayerGui.Message.Frame.Contents.Ok)
-        end)
-    end
-end)
-
-spawn(function()
-    while true do wait(60)
-        pcall(function()
-            Client.ZoneFlagCmds.Consume(getflag()[1],getflag()[2])
-        end)
-    end
-end)
